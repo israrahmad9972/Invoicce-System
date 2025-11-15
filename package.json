@@ -1,0 +1,32 @@
+{
+  "name": "invoicce-system",
+  "version": "1.0.0",
+  "description": "Invoice Generatoration using postgree",
+  "main": "server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/israrahmad9972/Invoicce-System.git"
+  },
+  "author": "Israr Ahmad",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/israrahmad9972/Invoicce-System/issues"
+  },
+  "homepage": "https://github.com/israrahmad9972/Invoicce-System#readme",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "csv-parser": "^3.2.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "pdfkit": "^0.17.2",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
