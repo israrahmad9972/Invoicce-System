@@ -33,71 +33,141 @@ exports.createInvoiceAndPDF = async (req, res) => {
             medicineRecords.push({ ...dbMed.dataValues, quantity: med.quantity || 1 });
         }
 
-        // 3️⃣ Create invoice
-        const invoice = await Invoice.create({
-            totalAmount,
-            patientId: dbPatient.id
-        });
+       // 3️⃣ Create invoice
+const invoice = await Invoice.create({
+    totalAmount,
+    patientId: dbPatient.id
+});
 
-        // 4️⃣ Generate PDF
-        const doc = new PDFDocument({ margin: 50 });
-        const pdfDir = path.join(__dirname, '../pdfs');
-        if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+// 4️⃣ Generate PDF
+const doc = new PDFDocument({ margin: 40 });
+const pdfDir = path.join(__dirname, '../pdfs');
+if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-        const filePath = path.join(pdfDir, `invoice_${invoice.id}.pdf`);
-        doc.pipe(fs.createWriteStream(filePath));
+const filePath = path.join(pdfDir, `invoice_${invoice.id}.pdf`);
+doc.pipe(fs.createWriteStream(filePath));
 
-        // ===== Header =====
-        const logoPath = path.join(__dirname, '../assets/logo.png'); // replace with your logo path if any
-        if (fs.existsSync(logoPath)) {
-            doc.image(logoPath, 50, 45, { width: 50 });
-        }
 
-        doc.fontSize(20).text('Doctor Waleed Pharmacy', 0, 50, { align: 'center' });
-        doc.fontSize(10).text(`Invoice Date: ${invoice.invoiceDate.toDateString()}`, 0, 50, { align: 'right' });
+// ========== HEADER SECTION ==========
+const logoPath = path.join(__dirname, "../../assets/logo.jpg");
 
-        doc.moveDown(2);
+// Common Y for baseline
+const headerY = 40;
 
-        // ===== Patient Info =====
-        doc.fontSize(12).text(`Invoice ID: ${invoice.id}`);
-        doc.text(`Patient Name: ${dbPatient.name}`);
-        doc.text(`Phone: ${dbPatient.phone || 'N/A'}`);
-        doc.text(`Address: ${dbPatient.address || 'N/A'}`);
-        doc.moveDown();
+// === LOGO (Left Side) ===
+if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 40, headerY, { width: 80, height: 80 });
+}
 
-        // ===== Medicines Table =====
-        doc.fontSize(12).text('Medicines', { underline: true });
-        const tableTop = doc.y + 10;
-        const itemX = 50, qtyX = 250, priceX = 300, totalX = 400;
+// === CLINIC TITLE (Center) ===
+// Y slightly lower so that text appears vertically centered with logo
+const titleY = headerY + 30;
 
-        doc.fontSize(10);
-        doc.text('Name', itemX, tableTop);
-        doc.text('Qty', qtyX, tableTop);
-        doc.text('Price', priceX, tableTop);
-        doc.text('Total', totalX, tableTop);
+doc.fontSize(22)
+   .font('Helvetica-Bold')
+   .text('Waleed Health Care Center', 0, titleY, { align: 'center' });
 
-        let y = tableTop + 20;
-        medicineRecords.forEach(m => {
-            doc.text(m.name, itemX, y);
-            doc.text(m.quantity, qtyX, y);
-            doc.text(`$${m.price.toFixed(2)}`, priceX, y);
-            doc.text(`$${(m.price*m.quantity).toFixed(2)}`, totalX, y);
-            y += 20;
-        });
 
-        doc.moveTo(50, y).lineTo(550, y).stroke(); // horizontal line
-        y += 10;
-        doc.fontSize(12).text(`Total Amount: $${totalAmount.toFixed(2)}`, totalX, y, { bold: true });
+// === INVOICE DETAILS (Right Side) ===
+const rightX = 450; 
+const invoiceY = headerY + 25;
 
-        doc.end();
+doc.fontSize(10);
 
-        res.status(200).json({
-            message: 'Invoice created & PDF generated successfully',
-            invoiceId: invoice.id,
-            pdfPath: filePath
-        });
+// Invoice number
+doc.text(`Invoice No: ${invoice.id}`, rightX, invoiceY, { align: 'left' });
 
-    } catch (err) {
+// Date (sirf 12px neeche)
+doc.text(`Date: ${invoice.invoiceDate.toDateString()}`, rightX, invoiceY + 12, { align: 'left' });
+
+
+// Add spacing after header section
+doc.moveDown(6);
+
+
+// ========== PATIENT DETAILS BOX ==========
+doc.roundedRect(40, doc.y, 520, 80, 8)
+   .stroke();
+
+let boxY = doc.y + 10;
+
+doc.fontSize(12).font('Helvetica-Bold')
+   .text(`Patient Information`, 50, boxY);
+
+boxY += 20;
+
+doc.fontSize(11).font('Helvetica')
+doc.text(`Name: ${dbPatient.name}`, 50, boxY);
+
+boxY += 20; // neeche shift
+doc.text(`Phone: ${dbPatient.phone || 'N/A'}`, 50, boxY);
+
+boxY += 20;
+
+doc.text(`Address: ${dbPatient.address || 'N/A'}`, 50, boxY);
+
+doc.moveDown(5);
+
+
+// ========== MEDICINES TABLE ==========
+
+const tableTop = doc.y;
+const col1 = 50, col2 = 250, col3 = 350, col4 = 450;
+
+// Header Background
+doc.rect(col1 - 10, tableTop - 5, 480, 25).fill('#e6e6e6');
+doc.fillColor('#000');
+
+// Table Headings
+doc.fontSize(11).font('Helvetica-Bold')
+   .text('Medicine Name', col1, tableTop)
+   .text('Qty', col2, tableTop)
+   .text('Price', col3, tableTop)
+   .text('Total', col4, tableTop);
+
+doc.moveDown(1);
+
+let y = tableTop + 20;
+
+medicineRecords.forEach((m, i) => {
+    // Alternate row background
+    if (i % 2 === 0) {
+        doc.rect(col1 - 10, y - 5, 480, 20).fill('#f8f8f8');
+        doc.fillColor('#000');
+    }
+
+    doc.font('Helvetica').fontSize(10)
+       .text(m.name, col1, y)
+       .text(m.quantity, col2, y)
+       .text(`Rs. ${m.price.toFixed(2)}`, col3, y)
+       .text(`Rs. ${(m.price * m.quantity).toFixed(2)}`, col4, y);
+
+    y += 22;
+});
+
+// Bottom line
+doc.moveTo(40, y).lineTo(560, y).stroke();
+
+y += 10;
+
+// Total Amount
+doc.fontSize(13).font('Helvetica-Bold')
+   .text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, col4 - 20, y);
+
+// ========== FOOTER ==========
+doc.moveDown(4);
+doc.fontSize(10).font('Helvetica-Oblique')
+   .text('Thank you for visiting Waleed Health Care Center.', { align: 'center' })
+   .text('For queries contact: 0312-0000000 | waleedclinic@gmail.com', { align: 'center' });
+
+doc.end();
+
+res.status(200).json({
+    message: 'Invoice created & PDF generated successfully',
+    invoiceId: invoice.id,
+    pdfPath: filePath
+});
+} catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
     }

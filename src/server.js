@@ -15,6 +15,6 @@ app.use('/api/invoices', invoiceRoutes);
 
 connectDB();
 
-sequelize.sync({ alter: true }).then(() => console.log('DB synced'));
+sequelize.sync({ force: true }).then(() => console.log('DB synced'));
 
 app.listen(3000, () => console.log('Server running on port 3000'));
